@@ -22,13 +22,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Load the ledger once at startup — 39 rows, trivial to keep in memory.
-# Re-parsing per request would be wasteful and the CSV is static anyway.
+# Load the ledger once at startup
 BOOKINGS = load_ledger(config.CSV_PATH)
 log.info("Loaded %d prior bookings from %s", len(BOOKINGS), config.CSV_PATH)
 
 
-# Liveness probe — also handy for confirming which model + ledger size is live.
+# Health check endpoint
 @app.get("/api/health")
 def health() -> dict:
     return {"ok": True, "bookings_loaded": len(BOOKINGS), "model": config.OPENAI_MODEL}
