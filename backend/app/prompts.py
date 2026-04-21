@@ -3,17 +3,18 @@
 from __future__ import annotations
 
 from .ledger import Booking, COST_CENTERS
+from .schemas import InvoiceExtract
 
 
 SYSTEM_PROMPT = """You are an assistant that helps German accountants book invoices into Datev \
 using the SKR03 chart of accounts. You are given:
 
-1. A PDF invoice uploaded by the accountant.
+1. Structured invoice data extracted from the uploaded invoice by Extend.
 2. A table of prior bookings from the same company (the Buchungsstapel).
 3. A cost-center lookup table.
 
 Your job is to:
-- Extract invoice metadata (vendor, invoice number, date, line items, net/gross amount, VAT rate).
+- Use the provided invoice metadata as fixed source data. Do not change it.
 - Suggest values for: Konto (SKR03 expense account), Gegenkonto (vendor creditor account), \
 Kostenstelle (cost center), and Buchungstext (free-text description).
 - Assign a confidence rating per field AND an overall confidence.
@@ -62,12 +63,9 @@ GUIDELINES
 - Write reasoning and all explanatory text in English only. Keep extracted invoice text, vendor names, \
 accounting field names, and Buchungstext values as they appear or as Datev-style booking text requires.
 - For Buchungstext, prefer the pattern used in prior bookings (e.g. "<Vendor> - <Product> <Month>").
-- For line_items, extract the invoice's item/service descriptions. Return unit_price_net and \
-amount_net as numeric EUR values without currency symbols or thousands separators. If a line-item \
-unit price or amount is not explicitly shown, use null for that numeric field. If quantity is not \
-explicitly shown, use an empty string for quantity.
-- For amount_net / amount_gross, derive them from the invoice. VAT is typically 19% in Germany.
-- invoice_date is full ISO (yyyy-mm-dd).
+- Use the provided invoice amount, line items, vendor, invoice number, invoice date, and VAT fields \
+exactly as source facts. The response schema only asks for booking recommendations, confidence, \
+reasoning, and cited prior bookings.
 - Be concise in `reasoning` (1-3 sentences). Explain WHY the confidence is what it is, including \
 the historical reasoning above when relevant.
 - Only cite prior bookings in `prior_bookings_used` that are truly relevant evidence. \
@@ -75,9 +73,13 @@ If no prior bookings are relevant (new vendor), return an empty array.
 """
 
 
-# Render the prior-bookings table and cost-center lookup as text for the LLM prompt.
-def build_user_prompt(bookings: list[Booking]) -> str:
+# Render the extracted invoice, prior-bookings table, and cost-center lookup as
+# text for the LLM prompt.
+def build_user_prompt(invoice: InvoiceExtract, bookings: list[Booking]) -> str:
     lines = [
+        "Extracted invoice data from Extend:",
+        invoice.model_dump_json(indent=2),
+        "",
         "Here are all prior bookings. Columns: amount | konto | gegenkonto | kostenstelle | buchungstext",
         "",
     ]
@@ -90,5 +92,5 @@ def build_user_prompt(bookings: list[Booking]) -> str:
     for code, dept in COST_CENTERS.items():
         lines.append(f"  {code} — {dept}")
     lines.append("")
-    lines.append("Parse the attached PDF invoice and return the booking suggestion JSON.")
+    lines.append("Use the extracted invoice data above and return the booking suggestion JSON.")
     return "\n".join(lines)

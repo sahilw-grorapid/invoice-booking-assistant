@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-import base64
-
 from openai import OpenAI
 
 from . import config
 from .ledger import Booking
 from .prompts import SYSTEM_PROMPT, build_user_prompt
-from .schemas import BookingResponse
+from .schemas import BookingResponse, BookingSuggestionResponse, InvoiceExtract
 
 
 # Lazily-initialised singleton — we only pay the cost of constructing the
@@ -27,16 +25,13 @@ def _get_client() -> OpenAI:
     return _client
 
 
-# Send the PDF + prior bookings to the LLM via the Responses API and return a
-# strictly-validated BookingResponse. The Pydantic model doubles as the JSON schema
-# the model must fill in.
-def suggest_booking(pdf_bytes: bytes, filename: str, bookings: list[Booking]) -> BookingResponse:
+# Send the extracted invoice + prior bookings to the LLM via the Responses API
+# and return a strictly-validated BookingResponse. The invoice data has already
+# been extracted by Extend; the model only fills in booking recommendations.
+def suggest_booking(invoice: InvoiceExtract, bookings: list[Booking]) -> BookingResponse:
     client = _get_client()
-    # OpenAI's file input wants the PDF as a base64 data URL, not raw bytes.
-    pdf_b64 = base64.standard_b64encode(pdf_bytes).decode("ascii")
 
-    # One multimodal call does both: extract fields from the PDF and pick the booking
-    # based on the prior-bookings table we put in the text part of the user message.
+    # The LLM only sees structured invoice data, not the uploaded PDF bytes.
     response = client.responses.parse(
         model=config.OPENAI_MODEL,
         instructions=SYSTEM_PROMPT,
@@ -44,21 +39,23 @@ def suggest_booking(pdf_bytes: bytes, filename: str, bookings: list[Booking]) ->
             {
                 "role": "user",
                 "content": [
-                    {
-                        "type": "input_file",
-                        "filename": filename or "invoice.pdf",
-                        "file_data": f"data:application/pdf;base64,{pdf_b64}",
-                    },
-                    {"type": "input_text", "text": build_user_prompt(bookings)},
+                    {"type": "input_text", "text": build_user_prompt(invoice, bookings)},
                 ],
             }
         ],
         # text_format=<Pydantic model> generates a strict JSON schema from the model
         # and parses the response back into a typed instance
-        text_format=BookingResponse,
+        text_format=BookingSuggestionResponse,
     )
 
     if response.output_parsed is None:
         raise RuntimeError("Model returned no parseable output")
-    print(f"LLM response parsed successfully: {response.output_parsed}")
-    return response.output_parsed
+    parsed = response.output_parsed
+    return BookingResponse(
+        invoice=invoice,
+        suggestion=parsed.suggestion,
+        confidence=parsed.confidence,
+        confidence_score=parsed.confidence_score,
+        reasoning=parsed.reasoning,
+        prior_bookings_used=parsed.prior_bookings_used,
+    )

@@ -4,3 +4,4 @@ openai==2.32.0
 python-multipart==0.0.19
 pydantic==2.10.3
 python-dotenv==1.0.1
+extend-ai==1.9.0

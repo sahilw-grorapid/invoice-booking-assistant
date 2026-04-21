@@ -57,6 +57,17 @@ class PriorBookingRef(BaseModel):
     amount: float
 
 
+# Model-only response. The invoice fields come from Extend and are assembled
+# server-side so the LLM cannot rewrite extracted invoice data.
+class BookingSuggestionResponse(BaseModel):
+    model_config = _strict
+    suggestion: Suggestion
+    confidence: Confidence
+    confidence_score: float
+    reasoning: str
+    prior_bookings_used: list[PriorBookingRef]
+
+
 # Full backend response — what the frontend consumes from /api/suggest-booking.
 class BookingResponse(BaseModel):
     model_config = _strict

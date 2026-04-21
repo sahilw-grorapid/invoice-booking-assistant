@@ -6,6 +6,7 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 from . import config
+from .invoice_parser import extract_invoice
 from .ledger import load_ledger
 from .schemas import BookingResponse
 from .suggest import suggest_booking
@@ -22,13 +23,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Load the ledger once at startup — 39 rows, trivial to keep in memory.
-# Re-parsing per request would be wasteful and the CSV is static anyway.
+# Load the ledger once at startup
 BOOKINGS = load_ledger(config.CSV_PATH)
 log.info("Loaded %d prior bookings from %s", len(BOOKINGS), config.CSV_PATH)
 
 
-# Liveness probe — also handy for confirming which model + ledger size is live.
+# Health check endpoint
 @app.get("/api/health")
 def health() -> dict:
     return {"ok": True, "bookings_loaded": len(BOOKINGS), "model": config.OPENAI_MODEL}
@@ -51,9 +51,11 @@ async def suggest(file: UploadFile = File(...)) -> BookingResponse:
         )
 
     try:
-        return suggest_booking(data, file.filename or "invoice.pdf", BOOKINGS)
+        filename = file.filename or "invoice.pdf"
+        invoice = extract_invoice(data, filename)
+        print("Extracted invoice data:", invoice)
+        return suggest_booking(invoice, BOOKINGS)
     except RuntimeError as e:
-        print(f"Runtime error during booking suggestion: {e}")
         raise HTTPException(status_code=500, detail=str(e))
     except Exception:
         log.exception("Booking suggestion failed")

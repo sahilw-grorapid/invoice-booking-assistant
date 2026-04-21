@@ -1,0 +1,174 @@
+{
+  "name": "Invoice Booking Assistant Extractor",
+  "config": {
+    "baseProcessor": "extraction_performance",
+    "schema": {
+      "type": "object",
+      "required": [
+        "vendor_name",
+        "invoice_number",
+        "invoice_date",
+        "line_items",
+        "subtotal_amount",
+        "tax_amount",
+        "total_amount"
+      ],
+      "properties": {
+        "vendor_name": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The legal or trade name of the company issuing the invoice and requesting payment. Prefer the vendor/supplier name, not the bill-to customer."
+        },
+        "invoice_number": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The unique invoice identifier assigned by the vendor. It may be labeled Invoice Number, Invoice #, Rechnungsnummer, Rechnung Nr., Belegnummer, or similar."
+        },
+        "invoice_date": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "extend:type": "date",
+          "description": "The invoice issue date, not the due date or service period date. Return as ISO yyyy-mm-dd."
+        },
+        "line_items": {
+          "type": "array",
+          "description": "Invoice service or product rows. Do not include subtotal, tax, payment, balance, or grand-total rows as line items.",
+          "items": {
+            "type": "object",
+            "required": [
+              "description",
+              "quantity",
+              "unit_price",
+              "amount"
+            ],
+            "properties": {
+              "description": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "The item, service, subscription, or fee description shown on the invoice line."
+              },
+              "quantity": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "The explicit quantity, units, seats, hours, or months billed for this line item. Use null if no quantity is shown."
+              },
+              "unit_price": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "The net price per unit before VAT/tax for this line item. Use null if no unit price is shown."
+              },
+              "amount": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "The net amount before VAT/tax for this line item. Use null if no line amount is shown."
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "subtotal_amount": {
+          "type": "object",
+          "extend:type": "currency",
+          "description": "The invoice subtotal/net amount before VAT/tax, discounts, or grand total. For German invoices this is the Netto amount.",
+          "required": [
+            "amount",
+            "iso_4217_currency_code"
+          ],
+          "properties": {
+            "amount": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "description": "Numeric subtotal/net amount before VAT/tax."
+            },
+            "iso_4217_currency_code": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Three-letter ISO currency code, for example EUR."
+            }
+          },
+          "additionalProperties": false
+        },
+        "tax_amount": {
+          "type": "object",
+          "extend:type": "currency",
+          "description": "The total VAT/tax amount charged on the invoice. For German invoices this may be labeled MwSt., USt., VAT, Steuer, or Tax.",
+          "required": [
+            "amount",
+            "iso_4217_currency_code"
+          ],
+          "properties": {
+            "amount": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "description": "Numeric VAT/tax amount."
+            },
+            "iso_4217_currency_code": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Three-letter ISO currency code, for example EUR."
+            }
+          },
+          "additionalProperties": false
+        },
+        "total_amount": {
+          "type": "object",
+          "extend:type": "currency",
+          "description": "The final invoice gross total including VAT/tax. Prefer the amount due/payable if it matches the invoice total.",
+          "required": [
+            "amount",
+            "iso_4217_currency_code"
+          ],
+          "properties": {
+            "amount": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "description": "Numeric gross total amount including VAT/tax."
+            },
+            "iso_4217_currency_code": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Three-letter ISO currency code, for example EUR."
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "extractionRules": "Extract only fields that are visibly present or directly inferable from invoice arithmetic. Do not use bill-to/customer details as the vendor. Use the invoice issue date, not the due date. Use subtotal_amount for the net amount before VAT/tax, tax_amount for the total VAT/tax, and total_amount for the gross amount due. For line_items, include only actual billed services/products and exclude subtotal, tax, total, payment, and balance rows. Preserve vendor names and invoice numbers exactly as printed except for surrounding whitespace. Use null for unavailable scalar values rather than guessing.",
+    "advancedOptions": {
+      "citationsEnabled": true,
+      "arrayCitationStrategy": "property",
+      "advancedMultimodalEnabled": true,
+      "reviewAgent": {
+        "enabled": true
+      }
+    }
+  }
+}
