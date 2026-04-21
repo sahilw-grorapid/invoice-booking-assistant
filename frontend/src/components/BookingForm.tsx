@@ -41,6 +41,12 @@ function numberOrNull(value: string): number | null {
   return value === '' ? null : Number(value)
 }
 
+function toBelegdatum(invoiceDate: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(invoiceDate.trim())
+  if (!match) return ''
+  return `${match[3]}${match[2]}`
+}
+
 // Editable booking form. Diffs current state against `initial` to flag `user_modified`,
 // then emits the spec-shaped FinalBookingJSON on submit.
 export function BookingForm({ state, initial, suggestion, onChange, onSubmit }: Props) {
@@ -74,6 +80,8 @@ export function BookingForm({ state, initial, suggestion, onChange, onSubmit }: 
       konto: state.konto,
       kostenstelle: state.kostenstelle,
       buchungstext: state.buchungstext,
+      belegfeld_1: state.invoice_number,
+      belegdatum: toBelegdatum(state.invoice_date),
       confidence: suggestion.confidence,
       confidence_score: suggestion.confidence_score,
       reasoning: suggestion.reasoning,

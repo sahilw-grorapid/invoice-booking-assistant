@@ -57,6 +57,8 @@ export interface FinalBookingJSON {
   konto: string
   kostenstelle: string
   buchungstext: string
+  belegfeld_1: string
+  belegdatum: string
   confidence: Confidence
   confidence_score: number
   reasoning: string
