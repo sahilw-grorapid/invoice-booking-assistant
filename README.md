@@ -7,9 +7,7 @@ Small web app for German accountants: upload a PDF invoice, get a pre-filled Dat
 - **Backend** — FastAPI (Python 3.11) with the OpenAI SDK. Keeps the API key server-side.
 - **Frontend** — Vite + React + TypeScript. Plain CSS, no UI framework.
 - **LLM** — OpenAI `gpt-5-mini` (default; overridable via `OPENAI_MODEL`). Chosen because:
-  - Native PDF input support — one call does extraction _and_ reasoning, no separate PDF parser.
-  - Strict JSON-schema structured outputs (`response_format: json_schema, strict: true`) give us a typed, validated payload without post-processing hacks.
-  - Good cost/quality balance for a well-defined workflow that still needs multimodal extraction, category inference, and confidence calibration.
+  - Good cost/quality balance for me since i'm using my personal API Key for this project.
 - **AI shape** — Single structured call, no agent loop. With 39 prior bookings the whole ledger fits comfortably in the prompt, so retrieval/tools would be overhead. If the ledger grew to thousands of rows I'd move to a tool-using agent with `search_prior_bookings` and `get_vendor_history` tools.
 
 ## Run it
@@ -38,15 +36,7 @@ Frontend on http://localhost:5173, backend on http://localhost:8000. Vite proxie
    - overall confidence + numeric score + reasoning
    - the subset of prior bookings it actually cited as evidence
 3. **Review** — the frontend pre-fills every field, shows per-field confidence badges, highlights low-confidence fields with a red left-border and a "please confirm" hint, and exposes the model's reasoning + cited prior bookings. Each prior-booking row has a **use this** button to copy its values into the form.
-4. **Submit** — produces the booking JSON with extracted invoice data, line items, booking fields, `confidence`, `reasoning`, `prior_bookings_used` count, and `user_modified`. The JSON is shown in the UI and also `console.log`'d.
-
-## Confidence UX — the important bit
-
-- Every AI-suggested field carries a visible confidence badge. No silent guessing.
-- Low-confidence fields get an "unconfirmed" visual treatment (red left-border + helper text) so the user's eye lands there first.
-- Reasoning is one click away, open by default — never buried behind a modal.
-- Prior bookings are shown as **evidence**, not just a count. The user can see _why_ we suggested what we did and one-click apply a historical row if they prefer.
-- New-vendor case: if the model cites zero prior bookings, the evidence panel is replaced by a yellow/red banner telling the user to verify Konto/Kostenstelle manually.
+4. **Submit** — produces the booking JSON with the shape mentioned in the assignment.
 
 ## Project layout
 
