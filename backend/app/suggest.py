@@ -54,7 +54,7 @@ def suggest_booking(pdf_bytes: bytes, filename: str, bookings: list[Booking]) ->
             }
         ],
         # text_format=<Pydantic model> generates a strict JSON schema from the model
-        # and parses the response back into a typed instance — no json.loads dance.
+        # and parses the response back into a typed instance
         text_format=BookingResponse,
     )
 

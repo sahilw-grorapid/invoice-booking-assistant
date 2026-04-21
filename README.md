@@ -7,7 +7,7 @@ Small web app for German accountants: upload a PDF invoice, get a pre-filled Dat
 - **Backend** — FastAPI (Python 3.11) with the OpenAI SDK. Keeps the API key server-side.
 - **Frontend** — Vite + React + TypeScript. Plain CSS, no UI framework.
 - **LLM** — OpenAI `gpt-5-mini` (default; overridable via `OPENAI_MODEL`). Chosen because:
-  - Native PDF input support — one call does extraction *and* reasoning, no separate PDF parser.
+  - Native PDF input support — one call does extraction _and_ reasoning, no separate PDF parser.
   - Strict JSON-schema structured outputs (`response_format: json_schema, strict: true`) give us a typed, validated payload without post-processing hacks.
   - Good cost/quality balance for a well-defined workflow that still needs multimodal extraction, category inference, and confidence calibration.
 - **AI shape** — Single structured call, no agent loop. With 39 prior bookings the whole ledger fits comfortably in the prompt, so retrieval/tools would be overhead. If the ledger grew to thousands of rows I'd move to a tool-using agent with `search_prior_bookings` and `get_vendor_history` tools.
@@ -45,7 +45,7 @@ Frontend on http://localhost:5173, backend on http://localhost:8000. Vite proxie
 - Every AI-suggested field carries a visible confidence badge. No silent guessing.
 - Low-confidence fields get an "unconfirmed" visual treatment (red left-border + helper text) so the user's eye lands there first.
 - Reasoning is one click away, open by default — never buried behind a modal.
-- Prior bookings are shown as **evidence**, not just a count. The user can see *why* we suggested what we did and one-click apply a historical row if they prefer.
+- Prior bookings are shown as **evidence**, not just a count. The user can see _why_ we suggested what we did and one-click apply a historical row if they prefer.
 - New-vendor case: if the model cites zero prior bookings, the evidence panel is replaced by a yellow/red banner telling the user to verify Konto/Kostenstelle manually.
 
 ## Project layout
@@ -77,25 +77,12 @@ frontend/
   vite.config.ts                    proxy /api → localhost:8000
 ```
 
-## CSV format note
+## Some assumptions and tradeoffs
 
-The assignment PDF describes the Buchungsstapel as delimiter `;` with decimal comma. The actual attached file is comma-delimited with decimal points (e.g. `595.00`). The loader parses what's actually in the file.
-
-## Tradeoffs given the 4–6h budget
-
-- **No unit tests.** Time went into the confidence UX and prompt shape. The whole pipeline is small enough to verify end-to-end by uploading the 5 test PDFs.
-- **No OCR fallback** for scanned image-only PDFs. Modern OpenAI models handle most real invoices; if a PDF is pure image and the model fails, the form still opens with blanks — user can fill it manually.
-- **No auth / persistence.** Single-user local tool.
-- **Full SKR03 field support is out of scope** — I stick to the four booking fields the assignment calls out: Konto, Gegenkonto, Kostenstelle, and Buchungstext.
-
-## Verifying the five test scenarios
-
-Upload each PDF and check:
-
-| # | Vendor | Expected UX |
-|---|--------|-------------|
-| 01 | Slack GmbH 595 € | `high` confidence, prior bookings cited, all fields green |
-| 02 | AWS EMEA SARL 401.30 € | `medium` confidence, reasoning mentions amount-delta vs prior AWS bookings |
-| 03 | Steuerberater Müller 2 380 € | `medium` confidence, Buchungstext left generic, reasoning notes description varies |
-| 04 | Google Workspace 714 € | `medium` confidence, Konto 4980 / KST 1100 inferred from SaaS pattern |
-| 05 | Architekturbüro Kern 8 925 € | `low` confidence, evidence panel shows warning, user asked to confirm Konto |
+- **Single LLM call vs. agent loop** — I use one structured model call because the assignment timebox is 4–6 hours and the data is tiny. In a production level application, Agent loop would make more sense.
+- **Sending the PDF directly to the LLM** — The model handles PDF extraction and booking reasoning in the same request, which avoids a separate parser pipeline. For production, I would add a deterministic extraction layer.
+- **Full CSV in every request vs. caching/pre-indexing** — The full Buchungsstapel is only 39 rows, so sending it in the prompt is simpler and transparent. With thousands of rows, I would pre-index vendor/category history and retrieve only relevant rows.
+- **No unit tests** — I prioritized end-to-end behavior and UX within the timebox. The five provided sample PDFs act as the main acceptance tests for known recurring, variable, irregular, new-known-category, and new-unknown-category cases.
+- **No persistent storage** — The app is a local review tool: it displays/logs the submitted JSON but does not store invoices or bookings.
+- **Model choice: `gpt-5-mini`** — It is a good cost/quality fit since I used my personal API Key.
+- **English reasoning and explanations** — User-facing reasoning is forced to English for consistency and for my understanding of the English Language in the demo. Extracted invoice text, vendor names, and Datev-style booking text can still preserve the original German wording.

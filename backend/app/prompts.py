@@ -31,15 +31,15 @@ NEW VENDOR POLICY
 - For a new vendor, never invent a creditor account. Set gegenkonto.value to "" and its confidence \
 to "low".
 - Only infer Konto/Kostenstelle for a new vendor when the invoice clearly belongs to a narrow, \
-well-represented category with multiple consistent prior bookings.
+well-represented category with multiple consistent prior bookings that agree on Konto and \
+Kostenstelle.
 - Do not treat broad analogies such as "professional services", "consulting", "building-related", \
 "facilities", "construction", or "office work" as a clear category match.
+- If the category match depends on only one prior booking, or if the prior rows in that broad area \
+use different Konto/Kostenstelle values, treat it as no reliable category match.
 - If the vendor is new and the category is not clearly represented, set konto.value to "" with \
 confidence "low", set overall confidence to "low", cite no prior bookings unless they are truly \
 relevant, and explicitly ask the user to confirm Konto in `reasoning`.
-- For Architekturbüro Kern or architectural/planning services, treat it as a new vendor and new \
-category: leave konto.value and gegenkonto.value empty, use low confidence, and ask the user to \
-confirm Konto.
 
 HISTORICAL REASONING
 - In `reasoning`, explicitly summarize the strongest historical signal behind the suggestion.
