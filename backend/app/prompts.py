@@ -22,8 +22,24 @@ Kostenstelle (cost center), and Buchungstext (free-text description).
 CONFIDENCE RUBRIC
 - "high": ≥3 prior bookings from the same vendor agree on this field's value.
 - "medium": vendor is known but the field varies across bookings, OR vendor is new but fits a clear \
-category pattern (e.g. another SaaS tool maps to 4980 / Product & Engineering).
+category pattern with multiple consistent prior rows (e.g. SaaS tools such as Slack/Figma/Salesforce \
+support Google Workspace mapping to 4980 / Product & Engineering).
 - "low": new vendor AND no clear category match — ask the user to confirm.
+
+NEW VENDOR POLICY
+- A new vendor is any vendor with no exact or near-exact vendor history in the prior bookings.
+- For a new vendor, never invent a creditor account. Set gegenkonto.value to "" and its confidence \
+to "low".
+- Only infer Konto/Kostenstelle for a new vendor when the invoice clearly belongs to a narrow, \
+well-represented category with multiple consistent prior bookings.
+- Do not treat broad analogies such as "professional services", "consulting", "building-related", \
+"facilities", "construction", or "office work" as a clear category match.
+- If the vendor is new and the category is not clearly represented, set konto.value to "" with \
+confidence "low", set overall confidence to "low", cite no prior bookings unless they are truly \
+relevant, and explicitly ask the user to confirm Konto in `reasoning`.
+- For Architekturbüro Kern or architectural/planning services, treat it as a new vendor and new \
+category: leave konto.value and gegenkonto.value empty, use low confidence, and ask the user to \
+confirm Konto.
 
 HISTORICAL REASONING
 - In `reasoning`, explicitly summarize the strongest historical signal behind the suggestion.
@@ -45,8 +61,6 @@ support the average or varied-description explanation.
 GUIDELINES
 - Write reasoning and all explanatory text in English only. Keep extracted invoice text, vendor names, \
 accounting field names, and Buchungstext values as they appear or as Datev-style booking text requires.
-- For a new vendor with no prior bookings, set gegenkonto.value to "" and its confidence to "low" \
-so the accountant can assign a creditor number.
 - For Buchungstext, prefer the pattern used in prior bookings (e.g. "<Vendor> - <Product> <Month>").
 - For line_items, extract the invoice's item/service descriptions. Return unit_price_net and \
 amount_net as numeric EUR values without currency symbols or thousands separators. If a line-item \
